@@ -1,5 +1,5 @@
-# GPU-accelerated (joking) Snake in napari
-# --------------------------------------------
+# Snake in napari
+# ---------------
 #
 # Player 1 keys:
 player1_up_key = 'w'
@@ -110,8 +110,8 @@ class Game:
 
         # seed new food from time to time
         if len(self.food_positions) < self.maximum_food_available:
-            random_x = int(np.random.random_sample() * self.width / self.pixel_size) * self.pixel_size
-            random_y = int(np.random.random_sample() * self.height / self.pixel_size) * self.pixel_size
+            random_x = (int(np.random.random_sample() * self.width / self.pixel_size - 2) + 1) * self.pixel_size
+            random_y = (int(np.random.random_sample() * self.height / self.pixel_size - 2) + 1) * self.pixel_size
             if [random_x, random_y] not in self.player1_positions and \
                 [random_x, random_y] not in self.player2_positions and \
                 [random_x, random_y] not in self.food_positions:
@@ -177,7 +177,7 @@ class Game:
 
 # start up napari
 with napari.gui_qt():
-    viewer = napari.Viewer()
+    viewer = napari.Viewer(title="natari")
 
     game = Game()
 
