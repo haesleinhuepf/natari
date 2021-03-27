@@ -37,14 +37,18 @@ class Game:
         # Start webcam
         if self._video_source is None:
             self._video_source = cv2.VideoCapture(0)
+
+        # read augmentable playground
         _, picture = self._video_source.read()
         self._image_at_beginning = self._push_and_format(picture)
 
+        # setup virtual playground
         self.width = self._image_at_beginning.shape[2]
         self.height = self._image_at_beginning.shape[1]
 
         self.playground = cle.create([self.height, self.width])
 
+        # configure toys
         self.bar_radius = 75
 
         self.puck_x = self.width / 2
@@ -52,8 +56,12 @@ class Game:
         self.puck_delta_x = 10
         self.puck_delta_y = 0
 
+        self.puck_width = 50
+        self.puck_height = 40
+
         self.sensitive_area_width = 100
 
+        # setup GUI
         self.result_label = QLabel()
 
 
@@ -80,7 +88,7 @@ class Game:
         # check player positions
         self.player1_position = self._determine_player_position(self.player1_position, crop_left)
         self.player2_position = self._determine_player_position(self.player2_position, crop_right)
-        difference_picture = cle.pull(difference)
+        squared_difference_picture = cle.pull(difference)
 
         # move puck
         self.puck_x = self.puck_x + self.puck_delta_x
@@ -128,12 +136,31 @@ class Game:
         cle.draw_box(self.playground, self.player2_x, self.player2_position - self.bar_radius, 0, 3, self.bar_radius * 2, 0)
 
         # draw puck
-        cle.draw_sphere(self.playground, self.puck_x, self.puck_y, 0, 5, 3, 1)
+        cle.draw_sphere(self.playground, self.puck_x - self.puck_width / 2, self.puck_y - self.puck_height / 2, 0, self.puck_width, self.puck_height, 1)
 
-        # return playground
+        # binary playground image
         game_state = cle.pull(self.playground)
 
-        return [difference_picture, np.flip(picture, axis=1), game_state]
+        # turn camera view in single channel grey-value image
+        grey = cle.mean_z_projection(current_image)
+
+        # warp the image
+        gradient_radius = 25
+        position_delta = 25000
+        blurred_playground = cle.gaussian_blur(self.playground, sigma_x=gradient_radius, sigma_y=gradient_radius)
+        gradient = cle.laplace_box(blurred_playground)
+        vector_x = cle.multiply_image_and_scalar(gradient, scalar=position_delta)
+        vector_y = cle.multiply_image_and_scalar(gradient, scalar=position_delta)
+        warped_playground = cle.apply_vector_field(grey, vector_x, vector_y)
+
+        return [
+                    # images to add in napari
+                    [cle.pull(grey), squared_difference_picture, game_state, cle.pull(vector_x), cle.pull(vector_x), cle.pull(warped_playground)],
+                    # names
+                    ['camera input', 'squared difference',      'game state', 'vector x',        'vector y',         'warped view' ],
+                    # visibility
+                    [False,          False,                      False,      False,              False,              True]
+                ]
 
     def _push_and_format(self, picture):
         """
@@ -178,7 +205,7 @@ with napari.gui_qt():
     game = Game()
 
     # Add a menu
-    action = QAction('Export Jython/Python code', viewer.window._qt_window)
+    action = QAction('Restart Ping Pong', viewer.window._qt_window)
     action.triggered.connect(game.reset)
     viewer.window.plugins_menu.addAction(action)
 
@@ -193,14 +220,17 @@ with napari.gui_qt():
 
     # Multi-threaded interaction
     # inspired by https://napari.org/docs/dev/events/threading.html
-    def update_layer(new_images):
+    def update_layer(data):
+
+        new_images, names, visiblity = data
+
         for i, new_image in enumerate(new_images):
             if new_image is not None:
                 try:
-                    viewer.layers['result' + str(i)].data = new_image
+                    viewer.layers[names[i]].data = new_image
                 except KeyError:
                     viewer.add_image(
-                        new_image, name='result' + str(i), blending='additive'
+                        new_image, name=names[i], blending='additive', visible=visiblity[i]
                     )
 
 
