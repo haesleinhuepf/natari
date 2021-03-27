@@ -1,5 +1,8 @@
-# GPU-accelerated (joking) Ping-Pong in napari
-# --------------------------------------------
+# GPU-accelerated Ping-Pong in napari with hands-on experience
+# ------------------------------------------------------------
+#
+# In order to make this script run, you need to install
+# pyopencl, pyclesperanto-prototype==0.7.4, opencv-python and napari
 #
 # Have fun!
 #   @haesleinhuepf
