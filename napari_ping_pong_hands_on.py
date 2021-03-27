@@ -9,7 +9,8 @@ import pyclesperanto_prototype as cle
 import time
 import napari
 from napari.qt.threading import thread_worker
-from qtpy.QtWidgets import QLineEdit, QLabel, QWidget, QVBoxLayout
+from qtpy.QtWidgets import QLabel, QWidget, QVBoxLayout
+from qtpy.QtWidgets import QAction
 
 import cv2
 import numpy as np
@@ -17,6 +18,10 @@ import numpy as np
 class Game:
 
     def __init__(self):
+        self._video_source = None
+        self.reset()
+
+    def reset(self):
         """ Setup the game
         """
         self.player1_position = 200
@@ -30,10 +35,13 @@ class Game:
 
 
         # Start webcam
-        self.video_source = cv2.VideoCapture(0)
-        _, self.former_picture = self.video_source.read()
-        self.width = self.former_picture.shape[1]
-        self.height = self.former_picture.shape[0]
+        if self._video_source is None:
+            self._video_source = cv2.VideoCapture(0)
+        _, picture = self._video_source.read()
+        self._image_at_beginning = self._push_and_format(picture)
+
+        self.width = self._image_at_beginning.shape[2]
+        self.height = self._image_at_beginning.shape[1]
 
         self.playground = cle.create([self.height, self.width])
 
@@ -58,16 +66,20 @@ class Game:
             an image with the current state of the game
         """
 
-        # check player positions
-        _, picture = self.video_source.read()
-        image1 = cle.flip(cle.push(np.transpose(picture, (2, 0, 1))), flip_x=True, flip_y=False, flip_z=False)
-        image2 = cle.flip(cle.push(np.transpose(self.former_picture, (2, 0, 1))), flip_x=True, flip_y=False, flip_z=False)
-        difference = cle.sum_z_projection(cle.squared_difference(image1, image2))
+        # read camera image
+        _, picture = self._video_source.read()
+
+        # push to GPU and bring in right format
+        current_image = self._push_and_format(picture)
+
+        # determine
+        difference = cle.sum_z_projection(cle.squared_difference(current_image, self._image_at_beginning))
         crop_left = cle.crop(difference, start_x=0, start_y=0, width=self.sensitive_area_width, height=self.height)
         crop_right = cle.crop(difference, start_x=self.width - self.sensitive_area_width, start_y=0, width=self.sensitive_area_width, height=self.height)
 
-        self.player1_position = self._determine_player_position(self.player1_position, crop_left) #self._check_player_position(self.player1_position)
-        self.player2_position = self._determine_player_position(self.player2_position, crop_right) #self._check_player_position(self.player2_position)
+        # check player positions
+        self.player1_position = self._determine_player_position(self.player1_position, crop_left)
+        self.player2_position = self._determine_player_position(self.player2_position, crop_right)
         difference_picture = cle.pull(difference)
 
         # move puck
@@ -123,29 +135,26 @@ class Game:
 
         return [difference_picture, np.flip(picture, axis=1), game_state]
 
-    def _determine_player_position(self, former_position, image):
-        new_position = cle.center_of_mass(cle.multiply_images(image, image))[1]
-        intensity = cle.maximum_of_all_pixels(image)
-        return new_position
-
-    def _check_player_position(self, position):
-        """Checks if a player went out of the playground
+    def _push_and_format(self, picture):
+        """
+        Pushs a given camera picture to GPU memory and brings it in the right shape/dimension
 
         Parameters
         ----------
-        position: int
-            current position of the player
+        picture : numpy array
+            camera picture
 
         Returns
         -------
-            new, potentially corrected position of the player
-        """
+        cle.Image
 
-        if position - self.bar_radius < 0:
-            position = self.bar_radius
-        if position + self.bar_radius > self.height:
-            position = self.height - self.bar_radius
-        return position
+        """
+        result = cle.flip(cle.transpose_xy(cle.transpose_xz(cle.push(picture))), flip_x=True, flip_y=False, flip_z=False)
+        return result
+
+    def _determine_player_position(self, former_position, image):
+        new_position = cle.center_of_mass(cle.multiply_images(image, image))[1]
+        return new_position
 
     def _level_up(self):
         """If a player scores, the game restarts with smaller bars or accelerated puck speed.
@@ -167,6 +176,11 @@ with napari.gui_qt():
     viewer = napari.Viewer()
 
     game = Game()
+
+    # Add a menu
+    action = QAction('Export Jython/Python code', viewer.window._qt_window)
+    action.triggered.connect(game.reset)
+    viewer.window.plugins_menu.addAction(action)
 
     # Graphical user interface
     widget = QWidget()
