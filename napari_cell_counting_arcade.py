@@ -25,7 +25,7 @@ player_fire_key = "9"
 from skimage.io import imread
 dataset = imread("data/IXMtest_A02_s9.tif")
 nuclei_channel = 0
-colours = ['magenta', 'green', 'cyan']
+colours = ['magenta', 'green', 'cyan', 'gray']
 
 import time
 import napari
@@ -37,14 +37,17 @@ import numpy as np
 # Open a napari viewer
 viewer = napari.Viewer()
 
+images = []
+
 # add the original image channels as independent layers
 for i in range(0, dataset.shape[2]):
-    viewer.add_image(dataset[:,:,i], blending='additive', colormap=colours[i], name='channel' + str(i + 1))
+    viewer.add_image(dataset[:,:,i], blending='additive', name="channel" + str(i),colormap=colours[i])
+    images.append(dataset[:,:,i])
 
 # image segmentation: nuclei and cells
 binary_image = cle.threshold_otsu(dataset[:,:, nuclei_channel])
 labels_nuclei = cle.connected_components_labeling_box(binary_image)
-labels_cells = cle.extend_labels_with_maximum_radius(labels_nuclei, radius=30)
+labels_cells = cle.extend_labels_with_maximum_radius(labels_nuclei, radius=50)
 
 # The game
 class CellCountingArcade():
@@ -52,19 +55,28 @@ class CellCountingArcade():
     The game allows the player to shoot bullets from the bottom of the screen which move up and if they hit a nucleus
     it is removed from the image data in the viewer with the surrounding cell.
     """
-    def __init__(self, nuclei : LabelsData, cells : LabelsData, viewer : napari.Viewer):
+    def __init__(self, images, nuclei : LabelsData, cells : LabelsData, viewer : napari.Viewer):
+        self.images = images
         self.nuclei = nuclei
         self.cells = cells
         self.viewer = viewer
-        self.player_position = nuclei.shape[1] / 2
+        self.size = list(nuclei.shape)
+        self.size[1] = int(0.9 * self.size[1])
+        self.player_position = self.size[1] / 2
         self.bullets = []
         self.playground = cle.create_labels_like(nuclei)
+        self.fov_nuclei = cle.create_labels_like(nuclei)
+        self.fov_cells = cle.create_labels_like(nuclei)
+
+        self.fov_x = 0
+        self.fov_delta_x = 1
+        self.fov_max_x = nuclei.shape[1] - self.size[1]
 
     def move_player(self, delta):
         """
         Move the player left/right.
         """
-        if self.player_position + delta > 0 and self.player_position + delta < self.nuclei.shape[1]:
+        if self.player_position + delta > 0 and self.player_position + delta < self.size[1]:
             self.player_position += delta
 
     def fire(self):
@@ -95,7 +107,7 @@ class CellCountingArcade():
 
             # check if a bullet has hit a nucleus
             try:
-                label = nuclei[int(self.playground.shape[0] - bullet[1]), int(bullet[0])]
+                label = nuclei[int(self.playground.shape[0] - bullet[1]), int(bullet[0] + self.fov_x)]
             except IndexError:
                 label = 0
             if label != 0: # bullet has hit a nucleus
@@ -122,17 +134,26 @@ class CellCountingArcade():
 
         # collect all layers in a dictionary
         result = {}
-        for layer in self.viewer.layers:
-            result[layer.name] = cle.multiply_images(layer.data, binary)
+        for i, image in enumerate(self.images):
+            result["channel" + str(i)] = self.crop_fov(cle.multiply_images(image, binary))
 
         # add segmentation (invisble) and playground
-        result['nuclei'] = self.nuclei
-        result['cells'] = self.cells
+        result['nuclei'] = self.crop_fov(self.nuclei, self.fov_nuclei)
+        result['cells'] = self.crop_fov(self.cells, self.fov_cells)
         result['playground'] = cle.copy(self.playground)
+
+        self.fov_x += self.fov_delta_x
+        if self.fov_x <= 0:
+            self.fov_x = 0
+            self.fov_delta_x = 1
+        elif self.fov_x >= self.fov_max_x:
+            self.fov_x = self.fov_max_x
+            self.fov_delta_x = -1
 
         return result
 
-
+    def crop_fov(self, image, output=None):
+        return cle.crop(image, output, start_x=self.fov_x, width=self.size[1], height=self.size[0])
 
 def update_layers(images_data: dict):
     """
@@ -147,13 +168,12 @@ def update_layers(images_data: dict):
                 break
 
         if image is not None:
-            if "nuclei" in name or "cells" in name: # or "playground" in name:
-                viewer.add_labels(image, name=name, visible="playground" in name)
+            if "nuclei" in name or "cells" in name:
+                viewer.add_labels(image, name=name, visible=False)
             else:
                 viewer.add_image(image, name=name, blending='additive')
 
-
-game = CellCountingArcade(labels_nuclei, labels_cells, viewer)
+game = CellCountingArcade(images, labels_nuclei, labels_cells, viewer)
 
 # Key bindings for the game
 @viewer.bind_key(player_left_key)
