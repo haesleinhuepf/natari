@@ -1,6 +1,6 @@
 # Cell Counting Arcade
 #
-# This game runs in napari, shows an image with nuclei and cells.
+# This game runs in napari. It shows an image with nuclei and cells.
 # It uses numpy and clesperanto to draw a playground where you
 # can remove cells by shooting at them.
 #
@@ -13,7 +13,6 @@
 # conda install -c conda-forge pyopencl
 # pip install pyclesperanto-prototype
 # pip install napari==0.4.8
-# pip install jupyter
 #
 # Player keys:
 player_left_key = "1"
@@ -126,7 +125,7 @@ class CellCountingArcade():
         for layer in self.viewer.layers:
             result[layer.name] = cle.multiply_images(layer.data, binary)
 
-        # add segmentation (inivisble) and playground
+        # add segmentation (invisble) and playground
         result['nuclei'] = self.nuclei
         result['cells'] = self.cells
         result['playground'] = cle.copy(self.playground)
