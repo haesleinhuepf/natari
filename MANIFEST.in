@@ -1,8 +1,1 @@
-include LICENSE
-include README.md
-include requirements.txt
-include *.tif
-include *.txt
-
-recursive-exclude * __pycache__
-recursive-exclude * *.py[co]
+recursive-include napari_pyclesperanto_assistant *.png
