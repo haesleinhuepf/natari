@@ -10,19 +10,19 @@ Napari gaming
 Commander! Cells are intruding our dish! Control your tiny space ship using `1` and `2` keys to move it left/right.
 Use the `9` key to shoot a anti-cell bullet.
 
-![](images/cell_counting_arcade.gif)
+![](https://github.com/haesleinhuepf/natari/raw/master/images/cell_counting_arcade.gif)
 
 ## Snake
 Two mitochondria navigating in a cell searching for stress granules. 
 The two players can control their mito using the `W`, `A`, `S`, `D` and `I`, `J`, `K`, `L`  keys, respectively.
 
-![](images/snake.gif)
+![](https://github.com/haesleinhuepf/natari/raw/master/images/snake.gif)
 
 ## Ping pong
 Don't drop the organoid! Use your racket and hit it back to your colleage!
 The two players can use `W`, `S` and `I`, `K` to control their racket, respectively.
 
-![](images/ping_pong.gif)
+![](https://github.com/haesleinhuepf/natari/raw/master/images/ping_pong.gif)
 
 
 This [napari] plugin was generated with [Cookiecutter] using with [@napari]'s [cookiecutter-napari-plugin] template.
