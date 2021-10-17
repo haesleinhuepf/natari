@@ -12,6 +12,8 @@ Use the `9` key to shoot a anti-cell bullet.
 
 ![](images/cell_counting_arcade.gif)
 
+The image originates from [BBBC022v1](https://bbbc.broadinstitute.org/BBBC022) (Gustafsdottir et al., PLOS ONE, 2013), available from the Broad Bioimage Benchmark Collection (Ljosa et al., Nature Methods, 2012).
+
 ## Snake
 Two mitochondria navigating in a cell searching for stress granules. 
 The two players can control their mito using the `W`, `A`, `S`, `D` and `I`, `J`, `K`, `L`  keys, respectively.
