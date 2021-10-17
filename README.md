@@ -19,7 +19,7 @@ The two players can control their mito using the `W`, `A`, `S`, `D` and `I`, `J`
 ![](https://github.com/haesleinhuepf/natari/raw/master/images/snake.gif)
 
 ## Ping pong
-Don't drop the organoid! Use your racket and hit it back to your colleage!
+Don't drop the organoid! Use your racket and hit it back to your colleague!
 The two players can use `W`, `S` and `I`, `K` to control their racket, respectively.
 
 ![](https://github.com/haesleinhuepf/natari/raw/master/images/ping_pong.gif)
