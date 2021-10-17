@@ -44,8 +44,9 @@ the coverage at least stays the same before you submit a pull request.
 
 ## License
 
-Distributed under the terms of the [BSD-3] license,
-"natari" is free and open source software
+"natari" is free and open source software. The code is in the public domain.
+
+[See also: unlicense.org](https://unlicense.org)
 
 ## Issues
 
