@@ -148,6 +148,7 @@ class Game:
 
 @register_action(menu="Games > Ping pong")
 def ping_pong(viewer : napari.Viewer):
+    viewer.title = "natari"
 
     game = Game()
 

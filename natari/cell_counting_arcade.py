@@ -144,6 +144,8 @@ colours = ['magenta', 'green', 'cyan', 'gray']
 
 @register_action(menu="Games > Cell counting arcade")
 def cell_counting_arcade_with_default_image(viewer : napari.Viewer):
+    viewer.title = "natari"
+
     images = []
     data_path = Path(__file__).parent / "data"
     dataset = imread(data_path / "IXMtest_A02_s9.tif")

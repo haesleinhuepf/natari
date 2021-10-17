@@ -185,6 +185,7 @@ class Game:
 
 @register_action(menu="Games > Snake")
 def snake(viewer : napari.Viewer):
+    viewer.title = "natari"
 
     game = Game()
 
