@@ -17,8 +17,6 @@ player2_right_key = 'l'
 # Have fun!
 #   @haesleinhuepf
 
-import pyclesperanto_prototype as cle
-
 import time
 import napari
 import numpy as np
@@ -172,11 +170,6 @@ class Game:
     def draw_positions(self, new_positions, value):
         """bring position lists in the right format and draw the list of coordinates in a given color on the playground.
         """
-        #positions = cle.push(np.asarray(new_positions))
-        #values_and_positions = cle.create([positions.shape[0] + 1, positions.shape[1]])
-        #cle.set(values_and_positions, value)
-        #cle.paste(positions, values_and_positions, 0, 0)
-        #cle.write_values_to_positions(values_and_positions, self.temp)
         for p in new_positions:
             try:
                 self.temp[(p[1], p[0])] = value
