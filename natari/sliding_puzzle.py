@@ -77,13 +77,13 @@ def sliding_puzzle(viewer : napari.Viewer):
     @viewer.bind_key('s')
     def player_down_event(viewer):
         global current_pos_y
-        if current_pos_y < height / patch_size:
+        if current_pos_y < (height / patch_size) - 1:
             game_chain.append('s')
 
     @viewer.bind_key('d')
     def player_right_event(viewer):
         global current_pos_x
-        if current_pos_x < width / patch_size:
+        if current_pos_x < (width / patch_size) - 1:
             game_chain.append('d')
 
     @viewer.bind_key('r')
@@ -127,7 +127,9 @@ def game_loop(image, pos_x, pos_y):
 
         print(former_pos_x, former_pos_y, '->', pos_x, pos_y)
 
-        exchange_tiles(image, former_pos_x, former_pos_y, pos_x, pos_y)
+        if not exchange_tiles(image, former_pos_x, former_pos_y, pos_x, pos_y):
+            pos_x = former_pos_x
+            pos_y = former_pos_y
 
         if game_state == -1:
             game_chain = game_chain[:-1]
@@ -151,11 +153,15 @@ def set_tile_to_zero(image, x, y, patch_size):
 
 
 def exchange_tiles(image, x1, y1, x2, y2):
-    tile1 = image[y1 * patch_size:(y1 + 1) * patch_size, x2 * patch_size:(x2 + 1) * patch_size].copy()
-    tile2 = image[y2 * patch_size:(y2 + 1) * patch_size, x1 * patch_size:(x1 + 1) * patch_size].copy()
+    try:
+        tile1 = image[y1 * patch_size:(y1 + 1) * patch_size, x2 * patch_size:(x2 + 1) * patch_size].copy()
+        tile2 = image[y2 * patch_size:(y2 + 1) * patch_size, x1 * patch_size:(x1 + 1) * patch_size].copy()
 
-    image[y1 * patch_size:(y1 + 1) * patch_size, x2 * patch_size:(x2 + 1) * patch_size] = tile2
-    image[y2 * patch_size:(y2 + 1) * patch_size, x1 * patch_size:(x1 + 1) * patch_size] = tile1
+        image[y1 * patch_size:(y1 + 1) * patch_size, x2 * patch_size:(x2 + 1) * patch_size] = tile2
+        image[y2 * patch_size:(y2 + 1) * patch_size, x1 * patch_size:(x1 + 1) * patch_size] = tile1
+        return True
+    except:
+        return False
 
 
 def new_pos(pos_x, pos_y, direction):
@@ -188,7 +194,7 @@ def make_random_game(start_x, start_y, image, patch_size, length):
         former_pos_y = pos_y
 
         pos_x, pos_y = new_pos(pos_x, pos_y, direction)
-        if pos_x >= width or pos_x < 0 or pos_y >= height or pos_y < 0:
+        if pos_x >= width-1 or pos_x < 0 or pos_y >= height-1 or pos_y < 0:
             pos_x = former_pos_x
             pos_y = former_pos_y
         else:
