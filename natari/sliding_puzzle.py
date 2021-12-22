@@ -208,3 +208,11 @@ def make_random_game(start_x, start_y, image, patch_size, length):
     return path
 
 
+def draw_grid(image, path_size):
+    width = image.shape[1]
+    height = image.shape[0]
+    
+    for x in range(int(width / patch_size)):
+        image[:, x * patch_size] = 0
+    for y in range(int(height / patch_size)):
+        image[y * patch_size] = 0
