@@ -16,6 +16,7 @@ def sliding_puzzle(viewer : napari.Viewer):
     # global variables are not good.
     # Only in cheap game programming it's ok.
     global game_chain
+    global game_state
 
     from napari._qt.qthreading import thread_worker
     from skimage.io import imread, imshow
@@ -25,10 +26,11 @@ def sliding_puzzle(viewer : napari.Viewer):
     if len(viewer.layers) == 0:
         data_path = Path(__file__).parent / "data"
         dataset = imread(data_path / '17157718_1475080609170139_6436185275063838511_o.jpg')
-        viewer.add_image(dataset[100:1000,400:1600])
+        viewer.add_image(dataset[100:1000,400:1600].copy())
 
     # start game
     image = list(viewer.layers.selection)[0].data
+    draw_grid(image, patch_size)
     image = crop_image(image, patch_size).copy()
     width = image.shape[1]
     height = image.shape[0]
@@ -41,6 +43,7 @@ def sliding_puzzle(viewer : napari.Viewer):
 
     length = 50
     game_chain = make_random_game(start_x, start_y, image, patch_size, length)
+    game_state = 0
 
     def update_layers(data):
         game_layer.data = data
@@ -62,36 +65,36 @@ def sliding_puzzle(viewer : napari.Viewer):
     worker.start()
 
     # Key bindings for the game
-    @viewer.bind_key('w')
+    @viewer.bind_key('w', overwrite=True)
     def player_up_event(viewer):
         global current_pos_y
         if current_pos_y > 0:
             game_chain.append('w')
 
-    @viewer.bind_key('a')
+    @viewer.bind_key('a', overwrite=True)
     def player_left_event(viewer):
         global current_pos_x
         if current_pos_x > 0:
             game_chain.append('a')
 
-    @viewer.bind_key('s')
+    @viewer.bind_key('s', overwrite=True)
     def player_down_event(viewer):
         global current_pos_y
         if current_pos_y < (height / patch_size) - 1:
             game_chain.append('s')
 
-    @viewer.bind_key('d')
+    @viewer.bind_key('d', overwrite=True)
     def player_right_event(viewer):
         global current_pos_x
         if current_pos_x < (width / patch_size) - 1:
             game_chain.append('d')
 
-    @viewer.bind_key('r')
+    @viewer.bind_key('r', overwrite=True)
     def player_random_next_step(viewer):
         global game_chain
         game_chain = game_chain + make_random_game(current_pos_x,current_pos_y,image,patch_size,1)
 
-    @viewer.bind_key('f')
+    @viewer.bind_key('f', overwrite=True)
     def player_find_home(viewer):
         global game_chain
         copy = game_chain
@@ -112,7 +115,7 @@ def list_replace(lst, a, b):
 def game_loop(image, pos_x, pos_y):
     global game_state, game_chain
 
-    if(game_state != len(game_chain)):
+    if game_state < len(game_chain):
         if game_state < 0:
             direction = game_chain[-1]
         else:
@@ -208,11 +211,11 @@ def make_random_game(start_x, start_y, image, patch_size, length):
     return path
 
 
-def draw_grid(image, path_size):
+def draw_grid(image, patch_size):
     width = image.shape[1]
     height = image.shape[0]
     
     for x in range(int(width / patch_size)):
-        image[:, x * patch_size] = 0
+        image[:, x * patch_size-1:x * patch_size+1] = 0
     for y in range(int(height / patch_size)):
-        image[y * patch_size] = 0
+        image[y * patch_size-1:y * patch_size+1] = 0
