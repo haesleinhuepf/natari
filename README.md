@@ -6,6 +6,12 @@
 
 Napari gaming
 
+## Sliding puzzle
+
+Restore the image by reordering the superpixels using the `W`, `A`, `S`, `D` keys! 
+
+![](https://github.com/haesleinhuepf/natari/raw/master/images/sliding_puzzle.gif)
+
 ## Cell counting arcade
 Commander! Cells are intruding our dish! Control your tiny space ship using `1` and `2` keys to move it left/right.
 Use the `9` key to shoot a anti-cell bullet.
