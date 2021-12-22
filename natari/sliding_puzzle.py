@@ -9,7 +9,17 @@ def sliding_puzzle(viewer: napari.Viewer):
 
 
 class SlidingPuzzleGame():
+    """
+    In the sliding puzzle game, the current image lay is split in tiles and the user can move tiles around by
+    exchanging neighboring tiles. At the start, tiles are exchanged randomly and a given starting tile is replaced
+    by a black square. The use can then use the WASD keys on the keyboard to move the replace the black tile with
+    neighbor tiles.
+    """
     def __init__(self, viewer: napari.Viewer):
+        """
+        This function is called only once because we don't want to add multiple key handlers and
+        background threads to the viewer.
+        """
         from napari._qt.qthreading import thread_worker
         import time
         self.game_layer = None
@@ -21,11 +31,18 @@ class SlidingPuzzleGame():
         self.image = None
 
         def update_layers(data):
+            """
+            This function is called when a new game state has been computed in the background thread.
+            It is responsible for updating the viewer in the main thread
+            """
             if self.game_layer is not None:
                 self.game_layer.data = data
 
         @thread_worker
         def loop_run():
+            """
+            This is an endless loop executing actions if the user hit a key.
+            """
             while True:  # endless loop
                 data = self.game_loop()
                 yield data
@@ -59,10 +76,20 @@ class SlidingPuzzleGame():
 
         @viewer.bind_key('r', overwrite=True)
         def player_random_next_step(viewer):
+            """
+            Make a random move.
+            """
             self.game_chain = self.game_chain + make_random_game(self.pos_x,self.pos_y,self.image,self.patch_size,1)
 
         @viewer.bind_key('f', overwrite=True)
         def player_find_home(viewer):
+            """
+            Revert the game state and go back to the start.
+
+            That's an Easter egg.
+
+            Let's see who reads the code or hits the F key by chance.
+            """
             copy = self.game_chain.copy()
             copy.reverse()
             list_replace(copy, 'w', 't')
@@ -75,11 +102,20 @@ class SlidingPuzzleGame():
 
     @classmethod
     def instance(cls, viewer):
+        """
+        This is a singleton implementation.
+        """
         if not hasattr(cls, "_instance"):
             cls._instance = SlidingPuzzleGame(viewer)
         return cls._instance
 
     def start(self):
+        """
+        Start the game on the current layer. If no layer is open, load Pixel the cat.
+        """
+        from skimage.io import imread, imshow
+        from pathlib import Path
+
         # game config
         self.patch_size = 100
 
@@ -89,29 +125,26 @@ class SlidingPuzzleGame():
         self.game_state = 0
         self.game_chain = []
 
-
-
-        from skimage.io import imread, imshow
-        from pathlib import Path
-
+        # if no layer open, load a picture of Pixel
         if len(self.viewer.layers) == 0:
             data_path = Path(__file__).parent / "data"
             dataset = imread(data_path / '17157718_1475080609170139_6436185275063838511_o.jpg')
             self.viewer.add_image(dataset[100:1000,400:1600].copy())
 
-        # start game
+        # initialize image
         self.image = list(self.viewer.layers.selection)[0].data
         self.image = crop_image(self.image, self.patch_size).copy()
         draw_grid(self.image, self.patch_size)
         self.width = self.image.shape[1]
         self.height = self.image.shape[0]
 
+        # initialize layer and tiles
         self.game_layer = self.viewer.add_image(self.image)
-
         start_x = int(self.width / 2 / self.patch_size)
         start_y = int(self.height / 2 / self.patch_size)
         set_tile_to_zero(self.image, start_x, start_y, self.patch_size)
 
+        # initialize the game with a random walk
         length = 50
         self.game_chain = make_random_game(start_x, start_y, self.image, self.patch_size, length)
         self.game_state = 0
@@ -121,25 +154,24 @@ class SlidingPuzzleGame():
 
 
     def game_loop(self):
-
+        """
+        This function runs in an endless loop in the background.
+        In case the use hit a key, it will update the game state.
+        """
         if self.game_state < len(self.game_chain):
             if self.game_state < 0:
                 direction = self.game_chain[-1]
             else:
                 direction = self.game_chain[self.game_state]
 
-            print(direction)
-
             former_pos_x = self.pos_x
             former_pos_y = self.pos_y
 
             self.pos_x, self.pos_y = new_pos(self.pos_x, self.pos_y, direction)
 
-            print(former_pos_x, former_pos_y, '->', self.pos_x, self.pos_y)
-
             if not exchange_tiles(self.image, former_pos_x, former_pos_y, self.pos_x, self.pos_y, self.patch_size):
-                pos_x = former_pos_x
-                pos_y = former_pos_y
+                self.pos_x = former_pos_x
+                self.pos_y = former_pos_y
 
             if self.game_state == -1:
                 self.game_chain = self.game_chain[:-1]
@@ -147,9 +179,40 @@ class SlidingPuzzleGame():
             else:
                 self.game_state += 1
 
-            print(self.game_state)
-
         return self.image
+
+
+def make_random_game(start_x, start_y, image, patch_size, length):
+    """
+    Sets up a random walk for the game start. The path will not contain subsequent up/down and left/right steps.
+    """
+    import numpy as np
+    directions = ['w', 'a', 's', 'd']
+    width = image.shape[1] / patch_size
+    height = image.shape[0] / patch_size
+
+    path = []
+    pos_x = start_x
+    pos_y = start_y
+
+    while len(path) < length:
+        direction = directions[np.random.randint(0, 4)]
+
+        former_pos_x = pos_x
+        former_pos_y = pos_y
+
+        pos_x, pos_y = new_pos(pos_x, pos_y, direction)
+        if pos_x >= width-1 or pos_x < 0 or pos_y >= height-1 or pos_y < 0:
+            pos_x = former_pos_x
+            pos_y = former_pos_y
+        else:
+            path.append(direction)
+
+        if len(path) > 2:
+            if path[-3:-1] in ['ws', 'sw', 'ad', 'da']:
+                path = path[:-2]
+
+    return path
 
 
 def list_replace(lst, a, b):
@@ -192,37 +255,6 @@ def new_pos(pos_x, pos_y, direction):
         pos_x += 1
 
     return pos_x, pos_y
-
-
-def make_random_game(start_x, start_y, image, patch_size, length):
-    import numpy as np
-    directions = ['w', 'a', 's', 'd']
-    width = image.shape[1] / patch_size
-    height = image.shape[0] / patch_size
-
-    path = []
-    pos_x = start_x
-    pos_y = start_y
-
-    while len(path) < length:
-        direction = directions[np.random.randint(0, 4)]
-
-        former_pos_x = pos_x
-        former_pos_y = pos_y
-
-        pos_x, pos_y = new_pos(pos_x, pos_y, direction)
-        if pos_x >= width-1 or pos_x < 0 or pos_y >= height-1 or pos_y < 0:
-            pos_x = former_pos_x
-            pos_y = former_pos_y
-        else:
-            path.append(direction)
-
-        if len(path) > 2:
-            if path[-3:-1] in ['ws', 'sw', 'ad', 'da']:
-                print("hit")
-                path = path[:-2]
-
-    return path
 
 
 def draw_grid(image, patch_size):
